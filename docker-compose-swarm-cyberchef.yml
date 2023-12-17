@@ -1,0 +1,25 @@
+version: "3.9"
+services:
+  cyberchef:
+    image: mpepping/cyberchef:latest
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.cyberchef.rule=Host(`cyberchef.example.local`)"
+      - "traefik.http.routers.cyberchef.tls=true"
+    networks:
+      - traefik_traefik-net
+    deploy:
+      resources:
+        limits:
+          memory: 50M
+        reservations:
+          memory: 10M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        window: 120s
+
+
+networks:
+  traefik_traefik-net:
+    external: true

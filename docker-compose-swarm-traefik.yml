@@ -1,0 +1,73 @@
+version: "3.9"
+services:
+  ######################################## Traefik ########################################
+  traefik:
+    image: traefik:v3.0
+    configs:
+      - source: traefik-conf
+        target: /etc/traefik/traefik.yml
+      - source: traefik-dyn
+        target: /etc/traefik/dyn.yml
+    networks:
+      - default
+      - traefik-net
+    secrets:
+      - traefik-ssl-key
+      - traefik-ssl-crt
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=(Host(`traefik.example.local`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`)))"
+      - "traefik.http.routers.api.service=api@internal"
+      - "traefik.http.routers.api.tls=true"
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+        reservations:
+          cpus: '0.25'
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        window: 120s
+
+  ######################################## whomai ########################################
+  whoami:
+    image: containous/whoami:latest
+    networks:
+      - traefik-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.whoami.rule=Host(`whoami.example.local`)"
+      - "traefik.http.routers.whoami.tls=true"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+        reservations:
+          cpus: '0.1'
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        window: 120s
+
+configs:
+  traefik-conf:
+    external: true
+  traefik-dyn:
+    external: true
+
+networks:
+  traefik-net:
+    driver: overlay
+    attachable: true
+
+secrets:
+  traefik-ssl-key:
+    external: true
+  traefik-ssl-crt:
+    external: true

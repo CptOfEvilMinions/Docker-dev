@@ -1,0 +1,134 @@
+
+version: '3.9'
+services:
+  ######################################### Vault #########################################
+  vault:
+    image: vault:1.11.0
+    command: sh -c '/vault/vault-entrypoint-script.sh & vault server -config=/vault/config/vault-config.hcl && fg'
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.vault.rule=Host(`vault.hackinglab.local`)"
+      - "traefik.http.routers.vault.tls=true"
+      - "traefik.docker.network=traefik_traefik-net"
+    secrets:
+      - vault-hackinglab-local-rootCA-key
+      - vault-hackinglab-local-rootCA-cert
+      - vault-hackinglab-local-ldap-bind-url
+      - vault-hackinglab-local-ldap-bind-username
+      - vault-hackinglab-local-ldap-bind-password
+      - vault-hackinglab-local-intCA-key
+      - vault-hackinglab-local-intCA-cert
+    configs:
+      - source: vault-hackinglab-local-entrypoint-script
+        target: /vault/vault-entrypoint-script.sh
+        uid: '100'
+        gid: '100'
+        mode: 0755
+      - source: vault-hackinglab-local-config
+        target: /vault/config/vault-config.hcl
+        uid: '100'
+        gid: '100'
+        mode: 0440
+      - source: vault-hackinglab-local-ldap-admin-policy
+        target: /vault/policies/vault-policy-admin-user.hcl
+        uid: '100'
+        gid: '100'
+        mode: 0440
+      - source: vault-hackinglab-local-ldap-auth-config
+        target: /vault/config/vault-ldap-config.ldif
+        uid: '100'
+        gid: '100'
+        mode: 0440
+    networks:
+      - vault-backend
+      - traefik_traefik-net
+    environment:
+      - VAULT_ADDR=http://127.0.0.1:8200
+      - VAULT_API_ADDR=http://127.0.0.1:8200
+    volumes:
+      - vault-policies:/vault/policies
+      - vault-data:/vault/data
+      - vault-logs:/vault/logs
+    depends_on:
+      - consul
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          memory: 100M
+        reservations:
+          memory: 20M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 10
+        window: 120s
+
+
+  ######################################### Consul #########################################
+  consul:
+    image: consul:1.12.2
+    # DO NOT REMOVE the default is `consul agent dev`
+    entrypoint: consul agent -config-file=/consul/config/consul-config.hcl
+    configs:
+      - source: vault-hackinglab-local-consul-config
+        target: /consul/config/consul-config.hcl
+    networks:
+      - vault-backend
+    volumes:
+      - consul-data:/consul/data
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          memory: 100M
+        reservations:
+          memory: 20M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 10
+        window: 120s
+
+
+networks:
+  vault-backend:
+  traefik_traefik-net:
+    external: true
+
+
+volumes:
+  consul-data:
+  vault-policies:
+  vault-data:
+  vault-logs:
+
+secrets:
+  vault-hackinglab-local-rootCA-key:
+    external: true
+  vault-hackinglab-local-rootCA-cert:
+    external: true
+  vault-hackinglab-local-intCA-key:
+    external: true
+  vault-hackinglab-local-intCA-cert:
+    external: true
+  vault-hackinglab-local-ldap-bind-url:
+    external: true
+  vault-hackinglab-local-ldap-bind-username:
+    external: true
+  vault-hackinglab-local-ldap-bind-password:
+    external: true
+
+configs:
+  vault-hackinglab-local-consul-config:
+    external: true
+  vault-hackinglab-local-config:
+    external: true
+  vault-hackinglab-local-ldap-auth-config:
+    external: true
+  vault-hackinglab-local-ldap-admin-policy:
+    external: true
+  vault-hackinglab-local-entrypoint-script:
+    external: true

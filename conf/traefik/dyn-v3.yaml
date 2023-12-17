@@ -1,0 +1,19 @@
+######################################## TLS ########################################
+# https://docs.traefik.io/https/tls/#certificates-definition
+# https://docs.traefik.io/https/tls/#default-certificate
+# https://docs.traefik.io/https/tls/#tls-options
+
+
+tls:
+  stores:
+    default:
+      defaultCertificate:
+        certFile: "/run/secrets/traefik-ssl-crt"
+        keyFile: "/run/secrets/traefik-ssl-key"
+
+  options:
+    default:
+      # https://ssl-config.mozilla.org/#server=traefik&version=2.1.2&config=modern&guideline=5.7
+      # Minimum TLS version
+      minVersion: VersionTLS13
+
