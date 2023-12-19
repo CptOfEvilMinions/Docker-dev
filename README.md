@@ -1,5 +1,9 @@
 # Docker-dev
 
+> **⚠️ Warning**
+>
+> These are config examples and should be used at your own risk.
+
 ## Treafik
 1. `docker context use docker-dev`
 1. `brew install openssl`
